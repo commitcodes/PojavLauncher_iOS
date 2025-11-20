@@ -18,15 +18,16 @@ jobs:
         include:
           - platform: 2
             platform_name: ios
-    
+
     runs-on: macos-latest
+
     steps:
       - name: Remove work folders
         env:
           password: ${{ secrets.ELLIE_MINI_SECRET }}
         run: |
           echo "before"
-          ls -lah ./
+          ls -lah ./ 
           echo $password | sudo -S rm -rf ./* || true
           echo $password | sudo -S rm -rf ./.??* || true
           echo "after"
@@ -45,7 +46,7 @@ jobs:
 
       - name: Cache gl4es
         uses: actions/cache@main
-        if: false # use gl4es 1.1.5
+        if: false
         id: gl4es-cache
         with:
           path: gl4es/libs
@@ -124,19 +125,24 @@ jobs:
           export PATH=/opt/procursus/bin:/opt/homebrew/bin:$PATH
           export RUNNER=1 SLIMMED=1
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
-            # Build ipa and tipa for iOS
             gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
             gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
           elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
-            # Build tipa only for tvOS
             gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
           else
-            # Build ipa only for everything else
             gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
           fi
+
+      - name: Collect build artifacts
+        run: |
+          mkdir -p artifacts
+          find . -maxdepth 6 -type f -name "*.ipa" -exec cp {} artifacts/ \;
+          echo "Collected IPA files:"
+          ls -lah artifacts
 
       - name: Upload regular ipa
         uses: actions/upload-artifact@main
         with:
           name: net.kdt.pojavlauncher-${{ matrix.platform_name }}.ipa
-          path: artifacts/net.kdt.pojavlauncher-*-${{ matrix.platform_name }}.ipa
+          path: artifacts/*.ipa
+
